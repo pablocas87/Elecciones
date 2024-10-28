@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Resultados de Elecciones en Tiempo Real</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #eef1f5;
+      color: #333;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 0 15px;
+    }
+    h1 {
+      text-align: center;
+      font-size: 2.2em;
+      color: #1f4e78;
+      margin-bottom: 20px;
+    }
+    h2 {
+      font-size: 1.8em;
+      color: #1f4e78;
+      margin: 15px;
+    }
+    .info-adicional {
+      max-width: 800px;
+      margin: 0 auto 30px auto;
+      background-color: #fff;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      text-align: left;
+      line-height: 1.6;
+    }
+    .info-adicional p {
+      margin: 5px 0;
+      font-size: 1.1em;
+    }
+    .tablas-contenedor {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .tabla {
+      flex: 1;
+      min-width: 48%;
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 15px 20px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background-color: #336699;
+      color: #fff;
+      font-weight: 700;
+      font-size: 1.1em;
+    }
+    tr:nth-child(even) {
+      background-color: #f7f9fb;
+    }
+    tr:hover {
+      background-color: #dce7f1;
+    }
+    @media (max-width: 768px) {
+      .tablas-contenedor {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Resultados de Elecciones en Tiempo Real</h1>
+
+    <div class="info-adicional">
+      <p id="fechaConsulta"></p>
+      <p id="circuitosEscrutados"></p>
+      <p id="totalCircuitos"></p>
+      <p id="circuitosConObservaciones"></p>
+      <p id="totalHabilitadosEleccion"></p>
+      <p id="totalHabilitadosPlebiscito"></p>
+    </div>
+
+    <div class="tablas-contenedor">
+      <div class="tabla">
+        <h2>Elección Nacional</h2>
+        <table id="resultados">
+          <thead>
+            <tr>
+              <th>Partido</th>
+              <th style="text-align: center;">Votos</th>
+              <th style="text-align: center;">Porcentaje</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="tabla">
+        <h2>Plebiscitos</h2>
+        <table id="plebiscitos">
+          <thead>
+            <tr>
+              <th>Descripción</th>
+              <th style="text-align: center;">Votos</th>
+              <th style="text-align: center;">Porcentaje</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Usa un CDN para socket.io si no puedes servirlo desde tu servidor -->
+  <script src="https://cdn.socket.io/4.0.1/socket.io.min.js" crossorigin="anonymous"></script>
+  <script>
+    const socket = io();
+
+    socket.on('updateData', (data) => {
+      // Actualizar información adicional
+      document.getElementById('fechaConsulta').textContent = `Resultados al: ${data.infoAdicional.fechaConsulta}`;
+      document.getElementById('circuitosEscrutados').textContent = `Circuitos escrutados: ${data.infoAdicional.circuitosEscrutados} (${data.infoAdicional.porcentajeEscrutado}%)`;
+      document.getElementById('totalCircuitos').textContent = `Total de circuitos: ${data.infoAdicional.totalCircuitos}`;
+      document.getElementById('circuitosConObservaciones').textContent = `Circuitos con observaciones: ${data.infoAdicional.circuitosConObservaciones}`;
+      document.getElementById('totalHabilitadosEleccion').textContent = `Total de habilitados Elección Nacional: ${data.infoAdicional.totalHabilitadosEleccion}`;
+      document.getElementById('totalHabilitadosPlebiscito').textContent = `Total de habilitados Plebiscito: ${data.infoAdicional.totalHabilitadosPlebiscito}`;
+
+      // Actualizar resultados de la elección nacional
+      const tbodyEleccion = document.querySelector('#resultados tbody');
+      tbodyEleccion.innerHTML = '';
+
+      data.eleccionNacional.forEach((item) => {
+        const row = document.createElement('tr');
+
+        const partidoCell = document.createElement('td');
+        partidoCell.textContent = item.partido;
+        row.appendChild(partidoCell);
+
+        const votosCell = document.createElement('td');
+        votosCell.textContent = item.totalVotos.toLocaleString('es-ES');
+        votosCell.style.textAlign = "center";
+        row.appendChild(votosCell);
+
+        const porcentajeCell = document.createElement('td');
+        porcentajeCell.textContent = item.porcentaje;
+        porcentajeCell.style.textAlign = "center";
+        row.appendChild(porcentajeCell);
+
+        tbodyEleccion.appendChild(row);
+      });
+
+      // Actualizar resultados de los plebiscitos
+      const tbodyPlebiscitos = document.querySelector('#plebiscitos tbody');
+      tbodyPlebiscitos.innerHTML = '';
+
+      data.plebiscitos.forEach((plebiscito) => {
+        const row = document.createElement('tr');
+
+        const descripcionCell = document.createElement('td');
+        descripcionCell.textContent = plebiscito.descripcion;
+        row.appendChild(descripcionCell);
+
+        const votosCell = document.createElement('td');
+        votosCell.textContent = plebiscito.totalVotos.toLocaleString('es-ES');
+        votosCell.style.textAlign = "center";
+        row.appendChild(votosCell);
+
+        const porcentajeCell = document.createElement('td');
+        porcentajeCell.textContent = plebiscito.porcentaje;
+        porcentajeCell.style.textAlign = "center";
+        row.appendChild(porcentajeCell);
+
+        tbodyPlebiscitos.appendChild(row);
+      });
+    });
+  </script>
+</body>
+</html>
